@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>体制表 & ワークフロー経路</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #1e2235;
+    --surface3: #252a3d;
+    --border: #2e3349;
+    --accent: #3d7eff;
+    --accent2: #00c9a7;
+    --text: #e8eaf0;
+    --text2: #8b91a8;
+    --check: #00c9a7;
+    --cross: #ff6b6b;
+    --highlight: rgba(61,126,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px 28px;
+  }
+
+  .header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.03em; }
+  .badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+  .save-btn {
+    margin-left: auto; background: var(--accent); color: #fff; border: none;
+    padding: 7px 20px; border-radius: 6px; font-size: 12px; font-family: inherit;
+    font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  }
+  .save-btn:hover { opacity: 0.82; }
+
+  .info-bar {
+    display: flex; gap: 16px; align-items: center;
+    margin-bottom: 10px; font-size: 11px; color: var(--text2);
+  }
+  .ib-block { display: flex; align-items: center; gap: 5px; }
+  .ib-color { width: 11px; height: 11px; border-radius: 3px; }
+  .ibc-t { background: rgba(61,126,255,0.4); border: 1px solid rgba(61,126,255,0.6); }
+  .ibc-w { background: rgba(0,201,167,0.3); border: 1px solid rgba(0,201,167,0.5); }
+  .auto-label { margin-left: auto; color: var(--accent2); font-size: 11px; }
+
+  .table-wrapper {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+  /* Group header */
+  .gh th {
+    padding: 7px 10px; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .gh-base { background: var(--surface2); color: var(--text2); }
+  .gh-taisei {
+    background: rgba(61,126,255,0.12); color: #6aa3ff; text-align: center;
+    border-left: 2px solid rgba(61,126,255,0.35);
+    border-right: 2px solid rgba(61,126,255,0.35);
+  }
+  .gh-wf {
+    background: rgba(0,201,167,0.09); color: #00c9a7; text-align: center;
+    border-right: 2px solid rgba(0,201,167,0.3);
+  }
+  .gh-notify { background: rgba(251,191,36,0.07); color: #fbbf24; text-align: center; }
+
+  /* Col header */
+  .ch th {
+    padding: 7px 8px; font-size: 11px; font-weight: 600; color: var(--text2);
+    border-bottom: 2px solid var(--border); white-space: nowrap;
+    vertical-align: bottom; background: var(--surface2); text-align: left;
+  }
+  .ch .tc { text-align: center; }
+  .t-col  { background: rgba(61,126,255,0.05) !important; }
+  .w-col  { background: rgba(0,201,167,0.04) !important; }
+  .n-col  { background: rgba(251,191,36,0.03) !important; }
+  .bl-t { border-left:  2px solid rgba(61,126,255,0.28) !important; }
+  .br-t { border-right: 2px solid rgba(61,126,255,0.28) !important; }
+  .br-w { border-right: 2px solid rgba(0,201,167,0.22) !important; }
+
+  /* Body */
+  tbody tr { transition: background 0.1s; }
+  tbody tr:hover { background: var(--highlight); }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  .tc { text-align: center; }
+
+  /* Role badge */
+  .rb {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    font-family: 'IBM Plex Mono', monospace; white-space: nowrap;
+  }
+  .rb-pm  { background: rgba(61,126,255,0.15);  color: #6aa3ff; border: 1px solid rgba(61,126,255,0.35); }
+  .rb-pl  { background: rgba(0,201,167,0.15);   color: #00c9a7; border: 1px solid rgba(0,201,167,0.35); }
+  .rb-sl  { background: rgba(255,196,0,0.15);   color: #ffc400; border: 1px solid rgba(255,196,0,0.35); }
+  .rb-mem { background: rgba(139,145,168,0.15); color: #adb3cc; border: 1px solid rgba(139,145,168,0.35); }
+  .rb-ven { background: rgba(255,107,107,0.12); color: #ff8b8b; border: 1px solid rgba(255,107,107,0.35); }
+  .rb-sup { background: rgba(167,139,250,0.15); color: #b39dff; border: 1px solid rgba(167,139,250,0.35); }
+  .rb-ver { background: rgba(251,191,36,0.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.35); }
+
+  /* Input */
+  input[type="text"] {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); font-family: inherit; font-size: 12px;
+    padding: 3px 6px; width: 82px; transition: border-color 0.15s;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--text2); font-size: 11px; }
+
+  /* Scope checkboxes — compact */
+  .scope-row { display: flex; gap: 3px; flex-wrap: nowrap; align-items: center; }
+  .si {
+    display: flex; align-items: center; gap: 2px;
+    font-size: 11px; color: var(--text2); white-space: nowrap;
+    cursor: pointer; padding: 2px 3px; border-radius: 3px;
+    transition: background 0.1s; user-select: none;
+  }
+  .si:hover { background: rgba(255,255,255,0.05); }
+  .si.on { color: var(--text); }
+  .chk {
+    width: 13px; height: 13px; border-radius: 3px;
+    border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; flex-shrink: 0; transition: all 0.12s;
+  }
+  .chk.on { background: var(--check); border-color: var(--check); color: #fff; }
+
+  /* WF toggle cell */
+  .wf-cell {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    cursor: pointer; transition: all 0.15s; user-select: none;
+    font-size: 13px; font-weight: 700;
+  }
+  .wf-cell.is-o {
+    border: 2px solid var(--accent2); color: var(--accent2);
+    background: transparent;
+  }
+  .wf-cell.is-o:hover { background: rgba(0,201,167,0.12); }
+  .wf-cell.is-x {
+    border: 2px solid rgba(255,107,107,0.4);
+    background: rgba(255,107,107,0.08); color: var(--cross);
+  }
+  .wf-cell.is-x:hover { background: rgba(255,107,107,0.18); }
+
+  /* Notify toggle */
+  .nt-cell {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 4px; padding: 3px 9px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; user-select: none; white-space: nowrap;
+  }
+  .nt-cell.is-on {
+    background: rgba(251,191,36,0.15); color: #fbbf24;
+    border: 1px solid rgba(251,191,36,0.4);
+  }
+  .nt-cell.is-on:hover { background: rgba(251,191,36,0.25); }
+  .nt-cell.is-off {
+    background: rgba(139,145,168,0.1); color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .nt-cell.is-off:hover { background: rgba(139,145,168,0.2); }
+
+  /* Section separator */
+  .ssep td {
+    background: var(--surface3); padding: 4px 12px;
+    font-size: 10px; font-weight: 700; color: var(--text2);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+
+  .add-btn {
+    width: 100%; padding: 9px; background: transparent; border: none;
+    color: var(--accent); font-size: 12px; font-family: inherit;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 5px; border-top: 1px dashed var(--border); transition: background 0.15s;
+  }
+  .add-btn:hover { background: var(--highlight); }
+
+  .footer {
+    display: flex; gap: 16px; margin-top: 10px;
+    font-size: 11px; color: var(--text2); padding: 0 2px; flex-wrap: wrap;
+  }
+
+  @keyframes flash { 0%{opacity:1} 30%{opacity:0.2} 100%{opacity:1} }
+  .flashing { animation: flash 0.3s ease; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>体制表 / ワークフロー経路</h1>
+  <span class="badge">プロジェクト設定</span>
+  <button class="save-btn">変更を保存</button>
+</div>
+
+<div class="info-bar">
+  <div class="ib-block"><div class="ib-color ibc-t"></div>体制表</div>
+  <div class="ib-block"><div class="ib-color ibc-w"></div>WF経路（クリックで切替）</div>
+  <span class="auto-label">⚡ 担当範囲チェックでWF経路に即時反映</span>
+</div>
+
+<div class="table-wrapper">
+<table>
+  <colgroup>
+    <col style="width:106px">
+    <col style="width:88px">
+    <col style="width:88px">
+    <col>
+    <col style="width:88px">
+    <col style="width:88px">
+    <col style="width:80px">
+    <col style="width:68px">
+  </colgroup>
+  <thead>
+    <tr class="gh">
+      <th class="gh-base">ロール</th>
+      <th colspan="2" class="gh-taisei">体制表</th>
+      <th class="gh-base" style="border-right:2px solid rgba(0,201,167,0.3);">担当範囲</th>
+      <th colspan="3" class="gh-wf">ワークフロー経路</th>
+      <th class="gh-notify">通知</th>
+    </tr>
+    <tr class="ch">
+      <th></th>
+      <th class="t-col bl-t">社員番号</th>
+      <th class="t-col br-t">氏名</th>
+      <th style="border-right:2px solid rgba(0,201,167,0.25);">担当範囲</th>
+      <th class="w-col tc">ドキュメント<br><span style="font-size:10px;font-weight:400;">(第三者検証無し)</span></th>
+      <th class="w-col tc">ドキュメント<br><span style="font-size:10px;font-weight:400;">(第三者検証あり)</span></th>
+      <th class="w-col tc br-w">プログラム<br>検証</th>
+      <th class="n-col tc">通知</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- PM -->
+    <tr>
+      <td><span class="rb rb-pm">PM</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>詳細·開発</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>リンク</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>現地</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="n-col tc"><span class="nt-cell is-on" onclick="toggleNT(this)">🔔 ON</span></td>
+    </tr>
+
+    <!-- PL -->
+    <tr>
+      <td><span class="rb rb-pl">PL</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>詳細·開発</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>リンク</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>現地</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="n-col tc"><span class="nt-cell is-on" onclick="toggleNT(this)">🔔 ON</span></td>
+    </tr>
+
+    <!-- SL -->
+    <tr>
+      <td><span class="rb rb-sl">SL</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>管理</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>基本</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>詳細·開発</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>リンク</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>現地</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="n-col tc"><span class="nt-cell is-on" onclick="toggleNT(this)">🔔 ON</span></td>
+    </tr>
+
+    <!-- メンバー -->
+    <tr>
+      <td><span class="rb rb-mem">メンバー</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>詳細·開発</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>リンク</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>現地</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="n-col tc"><span class="nt-cell is-on" onclick="toggleNT(this)">🔔 ON</span></td>
+    </tr>
+
+    <!-- メンバー（現地） -->
+    <tr>
+      <td><span class="rb rb-mem">メンバー</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>詳細·開発</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>リンク</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>現地</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="n-col tc"><span class="nt-cell is-on" onclick="toggleNT(this)">🔔 ON</span></td>
+    </tr>
+
+    <!-- section: 委託先 -->
+    <tr class="ssep"><td colspan="8">委託先</td></tr>
+
+    <!-- 委託先リーダ -->
+    <tr>
+      <td><span class="rb rb-ven">委託先リーダ</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>詳細·開発</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>リンク</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>現地</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="n-col tc"><span class="nt-cell is-on" onclick="toggleNT(this)">🔔 ON</span></td>
+    </tr>
+
+    <!-- 委託先メンバ -->
+    <tr>
+      <td><span class="rb rb-ven">委託先メンバ</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>詳細·開発</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>リンク</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>現地</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="n-col tc"><span class="nt-cell is-off" onclick="toggleNT(this)">OFF</span></td>
+    </tr>
+
+    <!-- section: サポート -->
+    <tr class="ssep"><td colspan="8">サポート</td></tr>
+
+    <!-- サポート1 -->
+    <tr>
+      <td><span class="rb rb-sup">サポート</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>詳細·開発</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>リンク</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>現地</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="n-col tc"><span class="nt-cell is-off" onclick="toggleNT(this)">OFF</span></td>
+    </tr>
+
+    <!-- サポート2 -->
+    <tr>
+      <td><span class="rb rb-sup">サポート</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>詳細·開発</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>リンク</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>現地</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="n-col tc"><span class="nt-cell is-off" onclick="toggleNT(this)">OFF</span></td>
+    </tr>
+
+    <!-- section: 品証 / 検証 -->
+    <tr class="ssep"><td colspan="8">品証 / 検証</td></tr>
+
+    <!-- 検証 -->
+    <tr>
+      <td><span class="rb rb-ver">検証</span></td>
+      <td class="t-col bl-t"><input type="text" placeholder="社員番号"></td>
+      <td class="t-col br-t"><input type="text" placeholder="氏名"></td>
+      <td style="border-right:2px solid rgba(0,201,167,0.18);">
+        <div class="scope-row">
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>管理</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>基本</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>詳細·開発</span>
+          <span class="si on" onclick="toggleScope(this)"><span class="chk on">✓</span>リンク</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>現地</span>
+          <span class="si" onclick="toggleScope(this)"><span class="chk"></span>サポート</span>
+        </div>
+      </td>
+      <td class="w-col tc"><span class="wf-cell is-x" onclick="toggleWF(this)">✕</span></td>
+      <td class="w-col tc"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="w-col tc br-w"><span class="wf-cell is-o" onclick="toggleWF(this)">○</span></td>
+      <td class="n-col tc"><span class="nt-cell is-on" onclick="toggleNT(this)">🔔 ON</span></td>
+    </tr>
+
+  </tbody>
+</table>
+<button class="add-btn">＋ 行を追加</button>
+</div>
+
+<div class="footer">
+  <span>○ = WFに含まれる（承認ステップあり）</span>
+  <span>✕ = スキップ</span>
+  <span style="color:var(--accent2);">WF経路・通知はクリックで切替</span>
+</div>
+
+<script>
+function toggleScope(el) {
+  const chk = el.querySelector('.chk');
+  const isOn = chk.classList.contains('on');
+  chk.classList.toggle('on', !isOn);
+  chk.textContent = isOn ? '' : '✓';
+  el.classList.toggle('on', !isOn);
+
+  const row = el.closest('tr');
+  row.querySelectorAll('.wf-cell').forEach(span => {
+    span.classList.remove('flashing');
+    void span.offsetWidth;
+    span.classList.add('flashing');
+  });
+}
+
+function toggleWF(el) {
+  const isO = el.classList.contains('is-o');
+  el.classList.toggle('is-o', !isO);
+  el.classList.toggle('is-x', isO);
+  el.textContent = isO ? '✕' : '○';
+}
+
+function toggleNT(el) {
+  const isOn = el.classList.contains('is-on');
+  el.classList.toggle('is-on', !isOn);
+  el.classList.toggle('is-off', isOn);
+  el.textContent = isOn ? 'OFF' : '🔔 ON';
+}
+</script>
+</body>
+</html>

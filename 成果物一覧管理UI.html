@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成果物一覧管理</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+    --accent:#4f8ef7; --accent2:#7c5af0; --success:#22c97a; --warn:#f59e0b;
+    --danger:#ef4444; --text:#e8eaf6; --muted:#7b82a8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+
+  /* HEADER */
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
+  .header-title{font-size:15px;font-weight:700;color:var(--accent);}
+  .pj-badge{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);}
+  .type-tag{padding:2px 9px;border-radius:20px;font-weight:700;font-size:11px;}
+  .type-info{background:#1a3a5c;color:#60b4f7;border:1px solid #2a5a9c;}
+  .type-ctrl{background:#1f2a1a;color:#6ac97a;border:1px solid #2a4a2a;}
+  .save-btn{margin-left:auto;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;font-family:'Noto Sans JP',sans-serif;}
+  .save-btn:hover{background:#6fa3fa;}
+
+  /* LAYOUT */
+  .layout{display:flex;height:calc(100vh - 49px);}
+
+  /* SIDEBAR */
+  .sidebar{width:174px;min-width:174px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 0;overflow-y:auto;}
+  .sidebar-label{font-size:10px;color:var(--muted);padding:0 12px 6px;letter-spacing:.1em;text-transform:uppercase;}
+  .phase-item{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:7px;border-left:3px solid transparent;transition:all .12s;color:var(--muted);}
+  .phase-item:hover{background:var(--surface2);color:var(--text);}
+  .phase-item.active{border-left-color:var(--accent);background:var(--surface2);color:var(--text);}
+  .phase-code{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);min-width:14px;}
+  .phase-name{font-size:12px;flex:1;}
+  .phase-badge{font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 5px;font-family:'JetBrains Mono',monospace;}
+  .phase-badge.all-done{background:#0e3020;color:var(--success);border-color:#1a5030;}
+
+  /* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+  /* TOOLBAR */
+  .toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .filter-group{display:flex;align-items:center;gap:5px;}
+  .filter-label{font-size:11px;color:var(--muted);}
+  .filter-btn{padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;transition:all .12s;font-family:'Noto Sans JP',sans-serif;}
+  .filter-btn:hover{border-color:var(--accent);color:var(--text);}
+  .filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
+  .divider{width:1px;height:18px;background:var(--border);margin:0 2px;}
+  .search-input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 9px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;width:160px;}
+  .search-input:focus{outline:none;border-color:var(--accent);}
+  .add-btn{margin-left:auto;background:var(--surface2);border:1px dashed var(--border);border-radius:4px;color:var(--muted);padding:4px 12px;font-size:12px;cursor:pointer;transition:all .12s;font-family:'Noto Sans JP',sans-serif;}
+  .add-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .stats{font-size:11px;color:var(--muted);}
+  .stats span{color:var(--accent);font-weight:700;}
+
+  /* TABLE */
+  .table-wrap{flex:1;overflow-y:auto;}
+  table{width:100%;border-collapse:collapse;}
+  thead{position:sticky;top:0;z-index:10;}
+  th{background:var(--surface2);border-bottom:1px solid var(--border);padding:7px 9px;text-align:left;font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;}
+  tr.row{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer;}
+  tr.row:hover{background:var(--surface2);}
+  tr.row.required{background:rgba(79,142,247,.04);}
+  tr.row.required:hover{background:rgba(79,142,247,.09);}
+  tr.row.selected-row{background:rgba(79,142,247,.13) !important;outline:1px solid var(--accent);}
+  tr.row.deprecated{opacity:.4;}
+  tr.row.deprecated td{text-decoration:line-through;}
+  td{padding:7px 9px;vertical-align:middle;}
+
+  /* BADGES */
+  input[type="checkbox"]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;}
+  .req-badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:700;}
+  .req-required{background:rgba(79,142,247,.15);color:var(--accent);}
+  .req-optional{background:var(--surface2);color:var(--muted);}
+  .sys-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:700;}
+  .sys-info{background:#1a3a5c;color:#60b4f7;}
+  .sys-ctrl{background:#1f2a1a;color:#6ac97a;}
+  .sys-both{background:#2a2040;color:#b48af7;}
+  .ver-badge{display:inline-flex;align-items:center;gap:3px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+  .ver-badge.latest{background:#0e3020;color:var(--success);border-color:#1a5030;}
+  .ver-badge.outdated{background:#3a1f00;color:var(--warn);border-color:#6b3a00;}
+  .state-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap;}
+  .state-none   {background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+  .state-wip    {background:#1a3010;color:#7dd060;border:1px solid #2a5020;}
+  .state-wf     {background:#1a2a50;color:#60a4f7;border:1px solid #2a4a80;}
+  .worker-cell{font-size:11px;color:var(--muted);white-space:nowrap;}
+  .path-cell{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--success);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .editable-name{background:transparent;border:none;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;width:100%;padding:2px 4px;border-radius:3px;}
+  .editable-name:hover{background:var(--surface2);}
+  .editable-name:focus{outline:1px solid var(--accent);background:var(--surface2);}
+  .share-icon{color:var(--warn);font-size:12px;}
+
+  /* SUMMARY BAR */
+  .summary-bar{background:var(--surface2);border-top:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:18px;font-size:11px;color:var(--muted);}
+  .summary-item{display:flex;align-items:center;gap:4px;}
+  .sc{font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .c-accent{color:var(--accent);}
+  .c-success{color:var(--success);}
+  .c-warn{color:var(--warn);}
+  .progress-wrap{flex:1;background:var(--border);border-radius:3px;height:4px;overflow:hidden;margin-left:auto;max-width:180px;}
+  .progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .3s;}
+
+  /* DETAIL PANEL */
+  .detail-panel{width:480px;min-width:480px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .2s;}
+  .detail-panel.hidden{width:0;min-width:0;overflow:hidden;}
+  .detail-header{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .detail-title{font-size:13px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .detail-close{background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:3px;}
+  .detail-close:hover{color:var(--text);background:var(--surface2);}
+
+  /* WF TAB */
+  .wf-body{flex:1;overflow-y:auto;padding:14px;}
+  .section-title{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-weight:700;}
+  .wf-status-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:16px;}
+  .wf-cur-status{font-size:12px;font-weight:700;}
+  .wf-cur-ver{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+  .wf-status-tag{margin-left:auto;font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;}
+  .wf-st-none    {background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+  .wf-st-progress{background:rgba(79,142,247,.15);color:var(--accent);}
+  .wf-st-approved{background:rgba(34,201,122,.15);color:var(--success);}
+  .wf-st-rejected{background:rgba(239,68,68,.15);color:var(--danger);}
+
+  /* FORM */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .form-grid.full{grid-template-columns:1fr;}
+  .field-group{margin-bottom:0;}
+  .field-label{font-size:10px;color:var(--muted);margin-bottom:4px;letter-spacing:.05em;display:flex;align-items:center;gap:4px;}
+  .field-label .req-mark{color:var(--danger);font-size:11px;}
+  .field-input,.field-select,.field-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;}
+  .field-input:focus,.field-select:focus,.field-textarea:focus{outline:none;border-color:var(--accent);}
+  .field-textarea{resize:vertical;min-height:60px;}
+  .field-input-row{display:flex;gap:6px;}
+  .field-input-row .field-input{flex:1;}
+  .field-input-row .unit{font-size:11px;color:var(--muted);align-self:center;white-space:nowrap;}
+  .attach-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 10px;margin-bottom:6px;}
+  .attach-label{flex:1;font-size:12px;}
+  .attach-req{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;}
+  .attach-req.required{background:rgba(79,142,247,.15);color:var(--accent);}
+  .attach-req.optional{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+  .attach-chk input{accent-color:var(--accent);}
+  .attach-path{font-family:'JetBrains Mono',monospace;font-size:10px;width:160px;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:3px 6px;color:var(--text);}
+
+  /* SUBMIT BTN */
+  .wf-submit-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:4px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .12s;margin-top:4px;}
+  .wf-submit-btn:hover{background:#6fa3fa;}
+  .wf-submit-btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;}
+
+  /* HISTORY */
+  .hist-divider{border:none;border-top:1px solid var(--border);margin:18px 0 14px;}
+  .hist-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;}
+  .hist-row:last-child{border-bottom:none;}
+  .hist-dot{width:8px;height:8px;border-radius:50%;margin-top:3px;flex-shrink:0;}
+  .hist-dot.approved{background:var(--success);}
+  .hist-dot.rejected{background:var(--danger);}
+  .hist-dot.submitted{background:var(--accent);}
+  .hist-body{flex:1;}
+  .hist-act{color:var(--text);font-weight:500;}
+  .hist-who{color:var(--muted);margin-top:2px;}
+
+  /* 版別グループ */
+  .hist-group{border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;}
+  .hist-group-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;background:var(--surface2);font-size:12px;user-select:none;transition:background .12s;}
+  .hist-group-header:hover{background:#2a2f48;}
+  .hist-ver{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);}
+  .hist-toggle-icon{font-size:10px;color:var(--muted);margin-left:4px;}
+  .hist-group-body{max-height:0;overflow:hidden;transition:max-height .25s ease;padding:0 12px;}
+  .hist-group-body.open{max-height:400px;padding:4px 12px 8px;}
+  /* 承認履歴内の申請内容表示 */
+  .hist-form-detail{margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;overflow-y:auto;max-height:200px;}
+  .hist-form-row{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px;}
+  .hist-form-row:last-child{border-bottom:none;}
+  .hist-form-key{color:var(--muted);min-width:120px;flex-shrink:0;}
+  .hist-form-val{color:var(--text);}
+  /* wf-status inline (履歴バッジ用) */
+  .wf-status.s-approved{background:rgba(34,201,122,.15);color:var(--success);}
+  .wf-status.s-rejected{background:rgba(239,68,68,.15);color:var(--danger);}
+  .wf-status.s-progress{background:rgba(79,142,247,.15);color:var(--accent);}
+
+  /* WF経路入力テーブル */
+  .wf-route-table{display:flex;flex-direction:column;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:14px;}
+  .wf-rt-row{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--border);}
+  .wf-rt-row:last-child{border-bottom:none;}
+  .wf-rt-role{font-size:11px;font-weight:700;min-width:90px;color:var(--muted);}
+  .wf-rt-role.applicant-role{color:var(--accent);}
+  .wf-rt-role.current-role{color:#f97316;}
+  .wf-rt-role.muted-role{color:var(--muted);opacity:.6;}
+  .wf-rt-input{flex:1;font-size:12px;}
+  .wf-rt-role-input{max-width:100px;}
+  .wf-rt-arrow{text-align:center;color:var(--border);font-size:11px;padding:2px 0 2px 12px;}
+  .wf-rt-del{background:transparent;border:1px solid var(--border);border-radius:3px;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 6px;flex-shrink:0;transition:all .12s;}
+  .wf-rt-del:hover{border-color:var(--danger);color:var(--danger);}
+  .wf-add-btn{width:100%;background:transparent;border:1px dashed var(--border);border-radius:4px;color:var(--muted);padding:6px;font-size:11px;cursor:pointer;transition:all .12s;font-family:'Noto Sans JP',sans-serif;margin-bottom:4px;}
+  .wf-add-btn:hover{border-color:var(--accent);color:var(--accent);}
+  /* 通知テーブル */
+  .wf-notify-table{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+  .wf-notify-row{display:flex;align-items:center;gap:8px;}
+  .wf-notify-icon{font-size:14px;flex-shrink:0;}
+
+  /* 承認履歴の経路表示 */
+  .hist-route{margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  .hist-route-row{display:grid;grid-template-columns:90px 1fr 1fr 60px;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid var(--border);font-size:11px;}
+  .hist-route-row:last-child{border-bottom:none;}
+  .hist-route-role{font-weight:700;color:var(--muted);}
+  .hist-route-role.applicant-role{color:var(--accent);}
+  .hist-route-person{color:var(--text);}
+  .hist-route-date{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;}
+  .hist-route-status{text-align:center;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;}
+  .s-approved{background:rgba(34,201,122,.15);color:var(--success);}
+  .s-rejected{background:rgba(239,68,68,.15);color:var(--danger);}
+  .s-progress{background:rgba(79,142,247,.15);color:var(--accent);}
+  .s-wait{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--success);color:#fff;padding:9px 16px;border-radius:6px;font-size:12px;font-weight:700;transform:translateY(60px);opacity:0;transition:all .25s;z-index:999;}
+  .toast.show{transform:none;opacity:1;}
+
+  /* WF申請ボタン（アコーディオントリガー） */
+  .wf-apply-trigger{width:100%;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px;flex-shrink:0;}
+  .wf-apply-trigger:hover{background:#6fa3fa;}
+  .wf-apply-trigger.open{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+
+  /* アコーディオン本体 */
+  .wf-form-accordion{overflow:hidden;transition:max-height .3s ease;max-height:0;}
+  .wf-form-accordion.open{max-height:2000px;}
+
+  /* WF経路フロー */
+  .wf-route{display:flex;align-items:center;gap:0;flex-wrap:wrap;padding:10px 0 6px;overflow-x:auto;}
+  .wf-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;}
+  .wf-step-circle{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid;}
+  .wf-step-circle.applicant{background:rgba(79,142,247,.15);border-color:var(--accent);color:var(--accent);}
+  .wf-step-circle.approver {background:rgba(34,201,122,.12);border-color:var(--success);color:var(--success);}
+  .wf-step-circle.verifier {background:rgba(251,191,36,.12);border-color:var(--warn);color:var(--warn);}
+  .wf-step-circle.done     {background:rgba(34,201,122,.25);border-color:var(--success);color:var(--success);}
+  .wf-step-circle.current  {background:rgba(79,142,247,.25);border-color:var(--accent);color:#fff;box-shadow:0 0 0 3px rgba(79,142,247,.25);}
+  .wf-step-circle.current-worker{background:rgba(249,115,22,.2);border-color:#f97316;color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.2);}
+  .wf-step-circle.waiting  {background:var(--surface2);border-color:var(--border);color:var(--muted);}
+  .wf-step-label{font-size:10px;color:var(--muted);text-align:center;line-height:1.3;white-space:nowrap;}
+  .wf-step-label.current{color:var(--accent);}
+  .wf-arrow{color:var(--border);font-size:14px;margin:0 2px;margin-bottom:14px;flex-shrink:0;}
+  .wf-arrow.done-arrow{color:var(--success);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-title">成果物一覧管理</div>
+  <div class="pj-badge">PJ-2024-087</div>
+  <div class="pj-badge" style="color:var(--text)">自動搬送システム 更新</div>
+  <span class="type-tag type-info">情報系</span>
+  <span class="type-tag type-ctrl">制御系</span>
+  <button class="save-btn" onclick="saveAll()">💾 保存</button>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-label">工程</div>
+    <div id="phase-list"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="toolbar">
+      <div class="filter-group">
+        <span class="filter-label">系</span>
+        <button class="filter-btn active" onclick="setFilter('sys','all',this)">全て</button>
+        <button class="filter-btn" onclick="setFilter('sys','情報系',this)">情報系</button>
+        <button class="filter-btn" onclick="setFilter('sys','制御系',this)">制御系</button>
+      </div>
+      <div class="divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">区分</span>
+        <button class="filter-btn active" onclick="setFilter('req','all',this)">全て</button>
+        <button class="filter-btn" onclick="setFilter('req','必須',this)">必須</button>
+        <button class="filter-btn" onclick="setFilter('req','任意',this)">任意</button>
+      </div>
+      <div class="divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">状態</span>
+        <button class="filter-btn active" onclick="setFilter('state','all',this)">全て</button>
+        <button class="filter-btn" onclick="setFilter('state','未着手',this)">未着手</button>
+        <button class="filter-btn" onclick="setFilter('state','作成中',this)">作成中</button>
+        <button class="filter-btn" onclick="setFilter('state','ワークフロー中',this)">WF中</button>
+      </div>
+      <div class="divider"></div>
+      <button class="filter-btn" id="btn-selected" onclick="toggleSelFilter(this)">✅ 選択済</button>
+      <input class="search-input" type="text" placeholder="🔍 書類名検索..." oninput="render()" id="search">
+      <div class="stats" id="stats"></div>
+      <button class="add-btn" onclick="addNewRow()">＋ 追加</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34px">選択</th>
+            <th>書類/データ名</th>
+            <th style="width:52px">区分</th>
+            <th style="width:52px">対象系</th>
+            <th style="width:30px">共有</th>
+            <th style="width:72px">最新版</th>
+            <th style="width:100px">状態</th>
+            <th style="width:90px">現作業者</th>
+            <th>保管パス</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="summary-bar">
+      <div class="summary-item">選択済: <span class="sc c-accent" id="cnt-sel">0</span></div>
+      <div class="summary-item">必須: <span class="sc c-success" id="cnt-req">0</span></div>
+      <div class="summary-item">任意: <span class="sc c-warn" id="cnt-opt">0</span></div>
+      <div class="summary-item">合計: <span class="sc" id="cnt-all">0</span></div>
+      <div class="progress-wrap"><div class="progress-bar" id="prog"></div></div>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="detail-panel hidden" id="detail-panel">
+    <div class="detail-header">
+      <span style="font-size:13px;font-weight:700;color:var(--accent)">ワークフロー</span>
+      <span class="detail-title" id="detail-title" style="font-size:11px;color:var(--muted);margin-left:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"></span>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="wf-body" id="wf-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PJ_CODE = 'PJ-2024-087';
+
+const PHASES = [
+  {code:'A',name:'基本設計'},{code:'B',name:'概要設計'},{code:'C',name:'詳細設計'},
+  {code:'D',name:'プログラム開発'},{code:'E',name:'社内テスト'},{code:'F',name:'現地テスト'},
+  {code:'G',name:'稼働立ち会い'},{code:'H',name:'管理'},
+];
+
+// state: '未着手' | '作成中' | 'ワークフロー中'
+// wfStatus: 'none' | 'approved' | 'in-progress' | 'rejected'
+let deliverables = [
+  {id:1,phase:'A',name:'確定仕様書',req:'必須',sys:'両方',share:true,path:'PJコード\\02_基本設計\\01_受領資料\\02_確定仕様書',sel:true,deprecated:false,
+   ver:'v3',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[
+     {act:'WF申請',who:'Aさん',date:'2024-11-01',datetime:'09:32',type:'submitted',
+      route:[{role:'申請者',person:'Aさん',approvedAt:'2024-11-01 09:32'},{role:'委託先リーダ',person:'Bさん',approvedAt:'2024-11-01 14:05'},{role:'PL',person:'Cさん',approvedAt:'2024-11-01 16:48'},{role:'検証',person:'Dさん',approvedAt:'2024-11-02 10:22'},{role:'PM',person:'Eさん',approvedAt:'2024-11-02 11:00'}],
+      form:{'言語':'日本語','図書番号':'TB-2024-001','基準値（目標値）':'誤字脱字0件','作成日':'2024-11-01','申請回数':'1回','計画時の検証予定日':'2024-11-02','検証範囲':'全ページ','検証完了希望日':'2024-11-03','完了希望時刻':'17:00','作成担当者':'田中','ページ数':'42','検証時間':'2.0h','不具合件数':'0','標準不具合件数':'0','書類検証実施条件':'—'}},
+     {act:'PM承認',who:'Eさん',date:'2024-11-02',datetime:'11:00',type:'approved'},
+     {act:'改版 v2 申請',who:'Aさん',date:'2025-01-10',datetime:'10:15',type:'submitted',
+      route:[{role:'申請者',person:'Aさん',approvedAt:'2025-01-10 10:15'},{role:'委託先リーダ',person:'Bさん',approvedAt:'2025-01-10 15:30'},{role:'PL',person:'Cさん',approvedAt:'2025-01-11 09:00'},{role:'検証',person:'Dさん',approvedAt:'2025-01-11 13:45'},{role:'PM',person:'Eさん',approvedAt:'2025-01-11 14:20'}],
+      form:{'言語':'日本語','図書番号':'TB-2024-001','基準値（目標値）':'誤字脱字0件','作成日':'2025-01-10','申請回数':'2回','計画時の検証予定日':'2025-01-11','検証範囲':'変更箇所（p.12-15）','検証完了希望日':'2025-01-12','完了希望時刻':'17:00','作成担当者':'田中','ページ数':'44','検証時間':'1.0h','不具合件数':'1','標準不具合件数':'1','書類検証実施条件':'—'}},
+     {act:'PM承認',who:'Eさん',date:'2025-01-11',datetime:'14:20',type:'approved'},
+     {act:'改版 v3 申請',who:'Aさん',date:'2025-03-05',datetime:'09:50',type:'submitted',
+      route:[{role:'申請者',person:'Aさん',approvedAt:'2025-03-05 09:50'},{role:'委託先リーダ',person:'Bさん',approvedAt:'2025-03-05 13:00'},{role:'PL',person:'Cさん',approvedAt:'2025-03-05 17:10'},{role:'検証',person:'Dさん',approvedAt:'2025-03-06 10:05'},{role:'PM',person:'Eさん',approvedAt:'2025-03-06 11:30'}],
+      form:{'言語':'日本語','図書番号':'TB-2024-001','基準値（目標値）':'誤字脱字0件','作成日':'2025-03-05','申請回数':'3回','計画時の検証予定日':'2025-03-06','検証範囲':'全ページ再検証','検証完了希望日':'2025-03-07','完了希望時刻':'18:00','作成担当者':'田中','ページ数':'46','検証時間':'2.5h','不具合件数':'0','標準不具合件数':'0','書類検証実施条件':'—'}},
+     {act:'PM承認',who:'Eさん',date:'2025-03-06',datetime:'11:30',type:'approved'},
+   ]},
+  {id:2,phase:'A',name:'製作御確認仕様書',req:'必須',sys:'情報系',share:true,path:'PJコード\\02_基本設計\\02_製作御確認仕様書',sel:true,deprecated:false,
+   ver:'v2',verStatus:'latest',state:'作成中',worker:'山田',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2024-11-05',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-11-06',type:'approved'},{act:'改版 v2 申請',who:'田中PL',date:'2025-02-20',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2025-02-21',type:'approved'}]},
+  {id:3,phase:'A',name:'書類検証依頼書',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\05_品質記録\\01_ドキュメント',sel:true,deprecated:false,
+   ver:'v1',verStatus:'latest',state:'ワークフロー中',worker:'田中',wfStatus:'in-progress',
+   history:[{act:'WF申請',who:'田中PL',date:'2025-02-18',type:'submitted'}]},
+  {id:4,phase:'A',name:'書類検証報告書',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\05_品質記録\\01_ドキュメント',sel:true,deprecated:false,
+   ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:5,phase:'A',name:'機器設置基準書',req:'必須',sys:'制御系',share:true,path:'PJコード\\02_基本設計\\03_機器設置基準書',sel:true,deprecated:false,
+   ver:'v1',verStatus:'outdated',state:'作成中',worker:'佐藤',wfStatus:'rejected',
+   history:[{act:'WF申請',who:'田中PL',date:'2025-01-15',type:'submitted'},{act:'差し戻し',who:'鈴木PM',date:'2025-01-16',type:'rejected'}]},
+  {id:6,phase:'A',name:'入出力接続仕様書',req:'任意',sys:'制御系',share:true,path:'PJコード\\02_基本設計\\04_入出力接続仕様書',sel:false,deprecated:false,
+   ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:7,phase:'A',name:'オペレーションマニュアル',req:'必須',sys:'情報系',share:true,path:'PJコード\\02_基本設計\\05_オペマニ',sel:true,deprecated:false,
+   ver:'v2',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'山田担当',date:'2024-12-01',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-12-02',type:'approved'},{act:'改版 v2 申請',who:'山田担当',date:'2025-03-01',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2025-03-02',type:'approved'}]},
+  {id:8,phase:'A',name:'通信仕様書',req:'任意',sys:'制御系',share:false,path:'PJコード\\02_基本設計\\06_通信仕様',sel:false,deprecated:false,
+   ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:9,phase:'A',name:'QAシート',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\01_要件管理\\03_QAシート',sel:true,deprecated:false,
+   ver:'v1',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2024-11-20',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-11-21',type:'approved'}]},
+  {id:10,phase:'A',name:'基本設計_レビュー報告',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\05_品質記録\\02_レビュー報告書',sel:true,deprecated:false,
+   ver:'v1',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2024-11-25',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-11-26',type:'approved'}]},
+  // B
+  {id:11,phase:'B',name:'テーブル値定義書',req:'任意',sys:'情報系',share:false,path:'PJコード\\03_プログラム設計\\01_テーブル値定義書',sel:false,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:12,phase:'B',name:'テーブル設定書',req:'任意',sys:'情報系',share:false,path:'PJコード\\03_プログラム設計\\02_テーブル設定書',sel:false,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:13,phase:'B',name:'ステータス遷移図',req:'任意',sys:'制御系',share:false,path:'PJコード\\03_プログラム設計\\03_ステータス遷移図',sel:false,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:14,phase:'B',name:'概要設計_レビュー報告',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\05_品質記録\\02_レビュー報告書',sel:true,deprecated:false,ver:'v1',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2024-12-10',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-12-11',type:'approved'}]},
+  // E
+  {id:15,phase:'E',name:'リンクテスト項目一覧表',req:'任意',sys:'制御系',share:false,path:'PJコード\\04_テスト\\01_リンクテスト',sel:false,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:16,phase:'E',name:'システム機能検証チェックシート',req:'必須',sys:'情報系',share:true,path:'PJコード\\04_テスト\\02_システム機能検証チェックシート',sel:true,deprecated:false,ver:'v1',verStatus:'latest',state:'ワークフロー中',worker:'山田',wfStatus:'in-progress',
+   history:[{act:'WF申請',who:'山田担当',date:'2025-02-15',type:'submitted'}]},
+  {id:17,phase:'E',name:'検証依頼書',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\05_品質記録\\03_プログラム検証',sel:true,deprecated:false,ver:'v1',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2025-01-20',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2025-01-21',type:'approved'}]},
+  {id:18,phase:'E',name:'検証報告書',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\05_品質記録\\03_プログラム検証',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:19,phase:'E',name:'出荷検証チェックシート',req:'必須',sys:'両方',share:false,path:'PJコード\\04_テスト\\03_出荷検証チェックシート',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:20,phase:'E',name:'検証_不具合管理表',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\05_品質記録\\03_プログラム検証',sel:true,deprecated:false,ver:'v1',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2025-01-22',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2025-01-23',type:'approved'}]},
+  {id:21,phase:'E',name:'ウイルスチェック実施報告書',req:'必須',sys:'情報系',share:false,path:'PJコード\\04_テスト\\05_ウイルスチェック実施報告書',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  // F
+  {id:22,phase:'F',name:'現地テスト計画書',req:'必須',sys:'両方',share:false,path:'PJコード\\05_現地調整\\01_現地テストスケジュール',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:23,phase:'F',name:'作業手順書',req:'必須',sys:'両方',share:false,path:'PJコード\\05_現地調整\\01_現地テストスケジュール',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:24,phase:'F',name:'安全作業報告書',req:'必須',sys:'両方',share:false,path:'PJコード\\05_現地調整\\02_安全作業報告書',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:25,phase:'F',name:'現地調整報告書',req:'必須',sys:'両方',share:false,path:'PJコード\\05_現地調整\\03_現地調整報告書',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:26,phase:'F',name:'現地調整_不具合管理表',req:'必須',sys:'両方',share:false,path:'PJコード\\05_現地調整\\03_現地調整報告書',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:27,phase:'F',name:'リリースノート・インストール手順書',req:'必須',sys:'情報系',share:false,path:'PJコード\\05_現地調整\\10_インストール手順書',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  // H
+  {id:28,phase:'H',name:'見積依頼書',req:'必須',sys:'両方',share:false,path:'PJコード\\01_計画\\05_供給者合意管理',sel:true,deprecated:false,ver:'v1',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2024-10-10',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-10-11',type:'approved'}]},
+  {id:29,phase:'H',name:'発注依頼書',req:'必須',sys:'両方',share:false,path:'PJコード\\01_計画\\05_供給者合意管理',sel:true,deprecated:false,ver:'v1',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2024-10-15',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-10-16',type:'approved'}]},
+  {id:30,phase:'H',name:'リスク管理表',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\02_リスク管理',sel:true,deprecated:false,ver:'v2',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2024-10-20',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-10-21',type:'approved'},{act:'改版 v2 申請',who:'田中PL',date:'2025-01-05',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2025-01-06',type:'approved'}]},
+  {id:31,phase:'H',name:'課題管理表',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\03_課題管理表',sel:true,deprecated:false,ver:'v1',verStatus:'latest',state:'未着手',worker:'',wfStatus:'approved',
+   history:[{act:'WF申請',who:'田中PL',date:'2024-10-25',type:'submitted'},{act:'PM承認',who:'鈴木PM',date:'2024-10-26',type:'approved'}]},
+  {id:32,phase:'H',name:'借り入れ品管理表',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\06_貸し出し・借り入れ管理',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:33,phase:'H',name:'貸し出し品管理表',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\06_貸し出し・借り入れ管理',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:34,phase:'H',name:'完了レビュー報告書',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\07_完了レビュー',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:35,phase:'H',name:'委託先評価表(物件毎)',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\09_委託先評価（物件毎）',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:36,phase:'H',name:'プロジェクト完了書',req:'必須',sys:'両方',share:false,path:'PJコード\\10_管理\\08_プロジェクト完了書',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+  {id:37,phase:'H',name:'保守一覧表',req:'必須',sys:'両方',share:true,path:'PJコード\\90_その他\\01_納入物件情報',sel:true,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]},
+];
+
+let filters = {sys:'all',req:'all',state:'all',sel:false};
+let activePhase = 'A';
+let selectedId = null;
+let nextId = 100;
+
+// ---- INIT ----
+function init() { renderSidebar(); render(); }
+
+// ---- SIDEBAR ----
+function renderSidebar() {
+  const el = document.getElementById('phase-list');
+  el.innerHTML = PHASES.map(p => {
+    const rows = deliverables.filter(d => d.phase===p.code && !d.deprecated);
+    const sel = rows.filter(d=>d.sel).length;
+    const done = rows.length>0 && sel===rows.length;
+    return `<div class="phase-item${activePhase===p.code?' active':''}" onclick="setPhase('${p.code}')">
+      <span class="phase-code">${p.code}</span>
+      <span class="phase-name">${p.name}</span>
+      <span class="phase-badge${done?' all-done':''}">${sel}/${rows.length}</span>
+    </div>`;
+  }).join('');
+}
+function setPhase(c){activePhase=c;renderSidebar();render();}
+
+// ---- FILTERS ----
+function setFilter(type,val,btn){
+  filters[type]=val;
+  btn.closest('.filter-group').querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+function toggleSelFilter(btn){
+  filters.sel=!filters.sel;
+  btn.classList.toggle('active',filters.sel);
+  render();
+}
+
+// ---- RENDER TABLE ----
+function render() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const rows = deliverables.filter(d=>{
+    if(d.phase!==activePhase) return false;
+    if(filters.sys!=='all' && d.sys!==filters.sys && d.sys!=='両方') return false;
+    if(filters.req!=='all' && d.req!==filters.req) return false;
+    if(filters.state!=='all' && d.state!==filters.state) return false;
+    if(filters.sel && !d.sel) return false;
+    if(q && !d.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = rows.map(d=>{
+    const path = d.path.replace(/PJコード/g, PJ_CODE);
+    const verHtml = d.verStatus==='latest'
+      ? `<span class="ver-badge latest">✓ ${d.ver}</span>`
+      : d.verStatus==='outdated'
+      ? `<span class="ver-badge outdated">⚠ ${d.ver}</span>`
+      : `<span class="ver-badge">−</span>`;
+    const stateHtml = d.state==='作成中'
+      ? `<span class="state-badge state-wip">作成中</span>`
+      : d.state==='ワークフロー中'
+      ? `<span class="state-badge state-wf">WF中</span>`
+      : `<span class="state-badge state-none">未着手</span>`;
+    const isSel = selectedId===d.id;
+    return `<tr class="row${d.req==='必須'?' required':''}${d.deprecated?' deprecated':''}${isSel?' selected-row':''}" onclick="selectRow(${d.id})">
+      <td onclick="event.stopPropagation()"><input type="checkbox" ${d.sel?'checked':''} onchange="toggleSel(${d.id})" ${d.deprecated?'disabled':''}></td>
+      <td style="font-size:13px;padding:7px 9px">${d.name}</td>
+      <td><span class="req-badge ${d.req==='必須'?'req-required':'req-optional'}">${d.req}</span></td>
+      <td>${sysTag(d.sys)}</td>
+      <td>${d.share?'<span class="share-icon">🔗</span>':''}</td>
+      <td>${verHtml}</td>
+      <td>${stateHtml}</td>
+      <td class="worker-cell">${d.worker||'<span style="color:var(--border)">—</span>'}</td>
+      <td><div class="path-cell" title="${path}">${path}</div></td>
+    </tr>`;
+  }).join('');
+
+  updateSummary();
+  renderSidebar();
+}
+
+function sysTag(sys){
+  if(sys==='情報系') return '<span class="sys-tag sys-info">情報</span>';
+  if(sys==='制御系') return '<span class="sys-tag sys-ctrl">制御</span>';
+  return '<span class="sys-tag sys-both">両方</span>';
+}
+
+// ---- SUMMARY ----
+function updateSummary(){
+  const all=deliverables.filter(d=>!d.deprecated);
+  const sel=all.filter(d=>d.sel);
+  document.getElementById('cnt-all').textContent=all.length;
+  document.getElementById('cnt-sel').textContent=sel.length;
+  document.getElementById('cnt-req').textContent=sel.filter(d=>d.req==='必須').length;
+  document.getElementById('cnt-opt').textContent=sel.filter(d=>d.req==='任意').length;
+  const pct=all.length?Math.round(sel.length/all.length*100):0;
+  document.getElementById('prog').style.width=pct+'%';
+  document.getElementById('stats').innerHTML=`<span>${pct}%</span> 選択`;
+}
+
+// ---- ROW ACTIONS ----
+function toggleSel(id){
+  const d=deliverables.find(x=>x.id===id);
+  if(d){d.sel=!d.sel;updateSummary();renderSidebar();}
+}
+function addNewRow(){
+  deliverables.push({id:nextId++,phase:activePhase,name:'新規成果物',req:'任意',sys:'両方',share:false,
+    path:'PJコード\\',sel:false,deprecated:false,ver:'-',verStatus:'none',state:'未着手',worker:'',wfStatus:'none',history:[]});
+  render();
+}
+
+// ---- DETAIL PANEL ----
+function selectRow(id){
+  selectedId = (selectedId===id) ? null : id;
+  render();
+  if(selectedId===null){closeDetail();return;}
+  const d = deliverables.find(x=>x.id===id);
+  openDetail(d);
+}
+
+function closeDetail(){
+  selectedId=null;
+  wfFormOpen=false;
+  document.getElementById('detail-panel').classList.add('hidden');
+  render();
+}
+
+function openDetail(d){
+  document.getElementById('detail-panel').classList.remove('hidden');
+  document.getElementById('detail-title').textContent = d.name;
+  renderWFPanel(d);
+}
+
+// ---- WF PANEL ----
+const TODAY = new Date().toISOString().slice(0,10);
+
+// 正しいWF経路: 申請者 > 委託先リーダ > PL > 検証 > PM
+const WF_ROUTE = [
+  {role:'申請者',     type:'applicant'},
+  {role:'委託先\nリーダ', type:'approver'},
+  {role:'PL',        type:'approver'},
+  {role:'検証',      type:'verifier'},
+  {role:'PM',        type:'approver'},
+];
+
+let wfFormOpen = false;
+// 版ごとの開閉状態: { 'v1': true, 'v2': false, ... }
+let histOpenMap = {};
+
+function renderWFPanel(d){
+  const stMap={
+    'none':       {label:'未申請',   cls:'wf-st-none'},
+    'in-progress':{label:'申請中',   cls:'wf-st-progress'},
+    'approved':   {label:'承認済',   cls:'wf-st-approved'},
+    'rejected':   {label:'差し戻し', cls:'wf-st-rejected'},
+  };
+  const st = stMap[d.wfStatus]||stMap['none'];
+  const canSubmit = d.wfStatus!=='in-progress';
+
+  // ---- WF経路フロー（申請ルート設定。現作業者=検証をオレンジ、PM=未作業グレー） ----
+  // d.workerから現在の担当ロールを判定（仮：worker名→ロール対応）
+  // 今回は「検証」が現作業者、「PM」が未作業として固定表示
+  const currentStep = '検証'; // 本来はd.wfStatusやd.workerから動的に判定
+  const routeHtml = WF_ROUTE.map((step, i) => {
+    const roleName = step.role.replace('\n','');
+    let circleClass, labelStyle='';
+    if(roleName === currentStep && d.wfStatus === 'in-progress'){
+      circleClass = 'current-worker'; // オレンジ
+      labelStyle = 'color:#f97316;font-weight:700';
+    } else if(roleName === 'PM' && d.wfStatus === 'in-progress'){
+      circleClass = 'waiting'; // グレーアウト
+      labelStyle = 'color:var(--muted)';
+    } else {
+      circleClass = 'approver';
+    }
+    const arrow = i < WF_ROUTE.length-1 ? `<span class="wf-arrow">›</span>` : '';
+    return `
+      <div class="wf-step">
+        <div class="wf-step-circle ${circleClass}">${step.role.split('\n')[0]}</div>
+        <div class="wf-step-label" style="${labelStyle}">${step.role.replace('\n','<br>')}</div>
+      </div>${arrow}`;
+  }).join('');
+
+  // ---- 添付資料 ----
+  const attachItems = [
+    {label:'検証対象の書類',        req:'required', def:true},
+    {label:'不具合管理表（書類）',   req:'optional', def:false},
+    {label:'不具合管理表（委託先）', req:'optional', def:false},
+    {label:'課題管理表',             req:'optional', def:false},
+    {label:'その他（自由入力）',     req:'optional', def:false},
+  ];
+  const attachHtml = attachItems.map(a=>`
+    <div class="attach-row">
+      <span class="attach-label">${a.label}</span>
+      <span class="attach-req ${a.req}">${a.req==='required'?'添付必須（デフォルト✓）':'添付任意'}</span>
+      <label class="attach-chk"><input type="checkbox" ${a.def?'checked':''}></label>
+      <input class="attach-path" placeholder="${a.req==='required'?'✓ある場合は必須':'✓ある場合に必須'}"/>
+    </div>`).join('');
+
+  // ---- 承認履歴を版ごとにグループ化 ----
+  // history配列から版(v1,v2...)を区切りにグループ分け
+  const groups = [];
+  let cur = null;
+  for(const h of d.history){
+    // 「申請」エントリで新グループ開始
+    if(h.type==='submitted'){
+      // 版番号を申請actから抽出 or フォールバック
+      const match = h.act.match(/v\d+/);
+      const ver = match ? match[0] : (groups.length===0 ? 'v1' : `v${groups.length+1}`);
+      cur = {ver, items:[h]};
+      groups.push(cur);
+    } else {
+      if(!cur){ cur={ver:'v1',items:[]}; groups.push(cur); }
+      cur.items.push(h);
+    }
+  }
+
+  const histHtml = groups.length===0
+    ? '<div style="color:var(--muted);font-size:12px;padding:16px 0;text-align:center">履歴なし</div>'
+    : [...groups].reverse().map((g,gi)=>{
+        const key = `${d.id}_${g.ver}_${gi}`;
+        if(histOpenMap[key]===undefined) histOpenMap[key] = gi===0; // 最新だけ開く
+        const isOpen = histOpenMap[key];
+        const lastItem = g.items[g.items.length-1];
+        const statusCls = lastItem.type==='approved' ? 's-approved'
+                        : lastItem.type==='rejected' ? 's-rejected' : 's-progress';
+        const statusLabel = lastItem.type==='approved' ? '承認済'
+                          : lastItem.type==='rejected' ? '差し戻し' : '申請中';
+        const rowsHtml = g.items.map(h=>{
+          // 申請エントリ：申請内容 + WF経路テーブル
+          const formHtml = (h.type==='submitted' && h.form) ? `
+            <div class="hist-form-detail">
+              ${Object.entries(h.form).map(([k,v])=>`
+                <div class="hist-form-row">
+                  <span class="hist-form-key">${k}</span>
+                  <span class="hist-form-val">${v||'—'}</span>
+                </div>`).join('')}
+            </div>` : '';
+          // WF経路（申請時に保存したroute配列を表示）
+          const routeDispHtml = (h.type==='submitted' && h.route) ? `
+            <div class="hist-route">
+              ${h.route.map((r,ri)=>`
+                <div class="hist-route-row">
+                  <span class="hist-route-role ${ri===0?'applicant-role':''}">${r.role}</span>
+                  <span class="hist-route-person">${r.person}</span>
+                  <span class="hist-route-date">${r.approvedAt||'—'}</span>
+                  <span class="hist-route-status ${r.approvedAt?'s-approved':ri===0?'s-progress':'s-wait'}">${r.approvedAt?'承認済':ri===0?'申請':'待機'}</span>
+                </div>`).join('')}
+            </div>` : '';
+          return `
+            <div class="hist-row">
+              <div class="hist-dot ${h.type}"></div>
+              <div class="hist-body">
+                <div class="hist-act">${h.act}</div>
+                <div class="hist-who">${h.who} ／ ${h.date}${h.datetime?' '+h.datetime:''}</div>
+                ${h.notify&&h.notify.length ? `<div style="font-size:11px;color:var(--warn);margin-top:2px">🔔 通知: ${h.notify.join(' / ')}</div>` : ''}
+                ${formHtml}
+                ${routeDispHtml}
+              </div>
+            </div>`;
+        }).join('');
+        return `
+          <div class="hist-group">
+            <div class="hist-group-header" onclick="toggleHist('${key}',${d.id})">
+              <span class="hist-ver">${g.ver}</span>
+              <span class="wf-status ${statusCls}" style="font-size:10px;padding:1px 7px;border-radius:10px;font-weight:700">${statusLabel}</span>
+              <span style="margin-left:auto;color:var(--muted);font-size:11px">${g.items[0].date}</span>
+              <span class="hist-toggle-icon">${isOpen?'▲':'▼'}</span>
+            </div>
+            <div class="hist-group-body${isOpen?' open':''}">
+              ${rowsHtml}
+            </div>
+          </div>`;
+      }).join('');
+
+  const triggerLabel = wfFormOpen ? '▲ 申請入力を閉じる' : '📤 ワークフロー申請';
+
+  document.getElementById('wf-body').innerHTML = `
+    <!-- 現在状態バー（ドキュメント名なし） -->
+    <div class="wf-status-bar" style="margin-bottom:10px">
+      <div>
+        <div class="wf-cur-ver" style="font-size:12px">バージョン: ${d.ver} ／ 工程: ${d.phase}</div>
+      </div>
+      <span class="wf-status-tag ${st.cls}">${st.label}</span>
+    </div>
+
+    <!-- WF申請トリガーボタン -->
+    <button class="wf-apply-trigger ${wfFormOpen?'open':''}"
+      onclick="toggleWFForm(${d.id})" ${!canSubmit?'disabled':''}>
+      ${!canSubmit ? '⏳ 申請中（申請不可）' : triggerLabel}
+    </button>
+
+    <!-- アコーディオン：申請フォーム -->
+    <div class="wf-form-accordion ${wfFormOpen?'open':''}" id="wf-accordion">
+      <div style="padding:0 2px 14px">
+        <div class="form-grid">
+          <div class="field-group">
+            <div class="field-label">言語</div>
+            <select class="field-select"><option>日本語</option><option>英語</option><option>その他</option></select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">図書番号</div>
+            <input class="field-input" placeholder="図書番号">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <div class="field-label"><span class="req-mark">*</span>基準値（目標値）</div>
+            <input class="field-input" placeholder="入力">
+          </div>
+          <div class="field-group">
+            <div class="field-label">作成日</div>
+            <input class="field-input" type="date" value="${TODAY}">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <div class="field-label">申請回数</div>
+            <select class="field-select"><option>1回</option><option>2回</option><option>3回</option><option>その他</option></select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">計画時の検証予定日</div>
+            <input class="field-input" type="date" value="${TODAY}">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <div class="field-label"><span class="req-mark">*</span>検証範囲</div>
+            <input class="field-input" placeholder="入力">
+          </div>
+          <div class="field-group">
+            <div class="field-label">検証完了希望日</div>
+            <input class="field-input" type="date" value="${TODAY}">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <div class="field-label">完了希望時刻</div>
+            <input class="field-input" type="time">
+          </div>
+          <div class="field-group">
+            <div class="field-label"><span class="req-mark">*</span>作成担当者</div>
+            <input class="field-input" placeholder="氏名">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <div class="field-label"><span class="req-mark">*</span>ページ数</div>
+            <div class="field-input-row"><input class="field-input" type="number" placeholder="0"><span class="unit">ページ</span></div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">検証時間</div>
+            <select class="field-select">
+              <option>0.5h</option><option>1.0h</option><option>1.5h</option><option>2.0h</option>
+              <option>2.5h</option><option>3.0h</option><option>4.0h</option><option>5.0h</option><option>その他</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <div class="field-label">不具合件数</div>
+            <div class="field-input-row"><input class="field-input" type="number" placeholder="0"><span class="unit">件</span></div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">不具合件数内の標準不具合</div>
+            <div class="field-input-row"><input class="field-input" type="number" placeholder="0"><span class="unit">件</span></div>
+          </div>
+        </div>
+        <div class="form-grid full">
+          <div class="field-group">
+            <div class="field-label">書類検証実施条件</div>
+            <select class="field-select"><option>（選択肢を用意）</option></select>
+          </div>
+        </div>
+
+        <!-- 添付資料 -->
+        <div class="section-title" style="margin-top:8px">添付資料</div>
+        ${attachHtml}
+
+        <!-- WF経路（申請ルート設定・動的追加削除） -->
+        <div class="section-title" style="margin-top:14px">WF経路</div>
+        <div id="wf-route-container"></div>
+        <button class="wf-add-btn" onclick="addRouteStep()">＋ ステップを追加</button>
+
+        <!-- 通知 -->
+        <div class="section-title" style="margin-top:14px">通知先</div>
+        <div id="wf-notify-container"></div>
+        <button class="wf-add-btn" onclick="addNotifyRow()">＋ 通知先を追加</button>
+
+        <button class="wf-submit-btn" style="margin-top:14px" onclick="submitWF(${d.id})">📤 申請を送信</button>
+      </div>
+    </div>
+
+    <!-- 承認履歴（版別開閉） -->
+    <hr class="hist-divider">
+    <div class="section-title">承認履歴</div>
+    ${histHtml}
+  `;
+
+  // 動的WF経路を初期レンダリング
+  renderRouteSteps();
+  renderNotifyRows();
+}
+
+// ---- WF経路・通知 動的管理 ----
+let wfRouteSteps = [
+  {role:'申請者',     person:'Aさん', fixed:true},
+  {role:'委託先リーダ',person:'Bさん', fixed:false},
+  {role:'PL',        person:'Cさん', fixed:false},
+  {role:'検証',      person:'Dさん', fixed:false},
+  {role:'PM',        person:'Eさん', fixed:false},
+];
+let wfNotifyRows = [
+  {person:'Fさん'},
+  {person:'Gさん'},
+];
+
+function renderRouteSteps(){
+  const c = document.getElementById('wf-route-container');
+  if(!c) return;
+  c.innerHTML = `<div class="wf-route-table">` +
+    wfRouteSteps.map((s,i)=>{
+      const isFirst = i===0;
+      const arrow = i < wfRouteSteps.length-1
+        ? `<div class="wf-rt-arrow">↓</div>` : '';
+      const delBtn = !isFirst
+        ? `<button class="wf-rt-del" onclick="removeRouteStep(${i})" title="削除">✕</button>` : '';
+      const roleStyle = isFirst ? 'color:var(--accent)' : '';
+      return `
+        <div class="wf-rt-row" id="rt-row-${i}">
+          <input class="field-input wf-rt-input wf-rt-role-input" value="${s.role}"
+            placeholder="ロール名" oninput="wfRouteSteps[${i}].role=this.value"
+            ${isFirst?'style="color:var(--accent);font-weight:700"':''}>
+          <span style="color:var(--muted);font-size:11px;flex-shrink:0">→</span>
+          <input class="field-input wf-rt-input" value="${s.person}"
+            placeholder="担当者名" oninput="wfRouteSteps[${i}].person=this.value">
+          ${delBtn}
+        </div>
+        ${i < wfRouteSteps.length-1 ? '<div class="wf-rt-arrow">↓</div>' : ''}`;
+    }).join('') + `</div>`;
+}
+
+function addRouteStep(){
+  wfRouteSteps.push({role:'承認者',person:'',fixed:false});
+  renderRouteSteps();
+}
+
+function removeRouteStep(i){
+  if(i===0) return; // 申請者は削除不可
+  wfRouteSteps.splice(i,1);
+  renderRouteSteps();
+}
+
+function renderNotifyRows(){
+  const c = document.getElementById('wf-notify-container');
+  if(!c) return;
+  if(wfNotifyRows.length===0){
+    c.innerHTML='<div style="color:var(--muted);font-size:11px;padding:4px 0">通知先なし</div>';
+    return;
+  }
+  c.innerHTML = `<div class="wf-notify-table">` +
+    wfNotifyRows.map((n,i)=>`
+      <div class="wf-notify-row">
+        <span class="wf-notify-icon">🔔</span>
+        <input class="field-input wf-rt-input" value="${n.person}"
+          placeholder="通知先の氏名" oninput="wfNotifyRows[${i}].person=this.value">
+        <button class="wf-rt-del" onclick="removeNotifyRow(${i})" title="削除">✕</button>
+      </div>`).join('') + `</div>`;
+}
+
+function addNotifyRow(){
+  wfNotifyRows.push({person:''});
+  renderNotifyRows();
+}
+
+function removeNotifyRow(i){
+  wfNotifyRows.splice(i,1);
+  renderNotifyRows();
+}
+
+function toggleWFForm(id){
+  wfFormOpen = !wfFormOpen;
+  const d = deliverables.find(x=>x.id===id);
+  renderWFPanel(d);
+}
+
+function toggleHist(key, id){
+  histOpenMap[key] = !histOpenMap[key];
+  const d = deliverables.find(x=>x.id===id);
+  renderWFPanel(d);
+}
+
+function submitWF(id){
+  const d=deliverables.find(x=>x.id===id);
+  if(!d||!confirm('ワークフロー申請を送信しますか？')) return;
+  d.wfStatus='in-progress';
+  d.state='ワークフロー中';
+
+  // WF経路を収集（最新のinput値を反映）
+  const rtRows = document.querySelectorAll('#wf-route-container .wf-rt-row');
+  const route = wfRouteSteps.map((s,i)=>({
+    role: s.role,
+    person: s.person||'—',
+    approvedAt: i===0 ? `${TODAY} ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}` : null,
+  }));
+
+  // 通知先収集
+  const notify = wfNotifyRows.map(n=>n.person).filter(p=>p.trim());
+
+  // フォーム値収集
+  const acc = document.querySelector('.wf-form-accordion');
+  const selects   = acc ? [...acc.querySelectorAll('.field-select')] : [];
+  const inputs    = acc ? [...acc.querySelectorAll('.field-input:not(.wf-rt-input):not(.wf-notify-row .field-input)')] : [];
+  const dateInp   = acc ? [...acc.querySelectorAll('input[type=date]')] : [];
+  const numInp    = acc ? [...acc.querySelectorAll('input[type=number]')] : [];
+  const form = {
+    '言語':              selects[0]?.value||'—',
+    '図書番号':          inputs[0]?.value||'—',
+    '基準値（目標値）':  inputs[1]?.value||'—',
+    '作成日':            dateInp[0]?.value||TODAY,
+    '申請回数':          selects[1]?.value||'—',
+    '計画時の検証予定日':dateInp[1]?.value||TODAY,
+    '検証範囲':          inputs[2]?.value||'—',
+    '検証完了希望日':    dateInp[2]?.value||TODAY,
+    '完了希望時刻':      acc?.querySelector('input[type=time]')?.value||'—',
+    '作成担当者':        inputs[3]?.value||'—',
+    'ページ数':          numInp[0]?.value||'—',
+    '検証時間':          selects[2]?.value||'—',
+    '不具合件数':        numInp[1]?.value||'—',
+    '標準不具合件数':    numInp[2]?.value||'—',
+    '書類検証実施条件':  selects[3]?.value||'—',
+    '通知先':            notify.join(' / ')||'なし',
+  };
+
+  const now = new Date();
+  const datetime = now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  d.history.push({act:'WF申請',who:route[0].person,date:TODAY,datetime,type:'submitted',form,route,notify});
+  wfFormOpen=false;
+  render();
+  openDetail(d);
+  showToast('WF申請を送信しました 📤');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+init();
+</script>
+</body>
+</html>
