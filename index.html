@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSPS - プロジェクト管理システム</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #7c5af0;
+    --success: #22c97a;
+    --warn: #f59e0b;
+    --text: #e8eaf6;
+    --muted: #7b82a8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .header-logo {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .header-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .header-badge {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    gap: 48px;
+  }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+  }
+  .hero-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .hero-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .hero-title span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* CARDS */
+  .cards {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 760px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 32px;
+    flex: 1;
+    min-width: 280px;
+    max-width: 340px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+    transition: opacity 0.2s;
+    opacity: 0.7;
+  }
+  .card-blue::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .card-green::before { background: linear-gradient(90deg, var(--success), #00c9a7); }
+
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(79, 142, 247, 0.15);
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    font-size: 20px;
+  }
+  .card-blue .card-icon { background: rgba(79, 142, 247, 0.15); }
+  .card-green .card-icon { background: rgba(34, 201, 122, 0.15); }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .card-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+  .card-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tag-blue { background: rgba(79,142,247,0.15); color: var(--accent); border: 1px solid rgba(79,142,247,0.3); }
+  .tag-green { background: rgba(34,201,122,0.15); color: var(--success); border: 1px solid rgba(34,201,122,0.3); }
+  .tag-purple { background: rgba(124,90,240,0.15); color: var(--accent2); border: 1px solid rgba(124,90,240,0.3); }
+
+  .card-arrow {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.2s;
+    color: var(--muted);
+  }
+  .card:hover .card-arrow {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* FOOTER */
+  .footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-logo">MS</div>
+  <div>
+    <div class="header-title">MSPS プロジェクト管理</div>
+    <div class="header-sub">Murata System Project Support</div>
+  </div>
+  <div class="header-badge">v1.0</div>
+</header>
+
+<main class="main">
+  <div class="hero">
+    <div class="hero-label">Home</div>
+    <h1 class="hero-title">プロジェクト管理<span>ダッシュボード</span></h1>
+    <p class="hero-desc">管理したい画面を選択してください</p>
+  </div>
+
+  <div class="cards">
+    <a class="card card-blue" href="成果物一覧管理UI.html">
+      <div class="card-icon">📋</div>
+      <div class="card-title">成果物一覧管理</div>
+      <div class="card-desc">プロジェクトの成果物・ドキュメントの進捗状況を一元管理。承認ステータスのトラッキング。</div>
+      <div class="card-tags">
+        <span class="tag tag-blue">成果物</span>
+        <span class="tag tag-blue">進捗管理</span>
+        <span class="tag tag-purple">承認フロー</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a class="card card-green" href="体制表.html">
+      <div class="card-icon">👥</div>
+      <div class="card-title">体制表 & ワークフロー</div>
+      <div class="card-desc">プロジェクト体制・担当者アサインとワークフロー承認経路を統合管理。</div>
+      <div class="card-tags">
+        <span class="tag tag-green">体制表</span>
+        <span class="tag tag-green">担当者</span>
+        <span class="tag tag-purple">ワークフロー</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+  </div>
+</main>
+
+<footer class="footer">
+  MSPS — Murata System Project Support &nbsp;|&nbsp; © 2026
+</footer>
+
+</body>
+</html>
