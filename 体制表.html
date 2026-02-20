@@ -42,6 +42,13 @@
     font-weight: 600; cursor: pointer; transition: opacity 0.2s;
   }
   .save-btn:hover { opacity: 0.82; }
+  .home-btn {
+    background: var(--surface2); color: var(--text2); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 6px; font-size: 12px; font-family: inherit;
+    font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex;
+    align-items: center; gap: 5px; transition: all 0.2s;
+  }
+  .home-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   .info-bar {
     display: flex; gap: 16px; align-items: center;
@@ -203,6 +210,7 @@
 <body>
 
 <div class="header">
+  <a class="home-btn" href="index.html">🏠 ホーム</a>
   <h1>体制表 / ワークフロー経路</h1>
   <span class="badge">プロジェクト設定</span>
   <button class="save-btn">変更を保存</button>
